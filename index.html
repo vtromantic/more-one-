@@ -5,11 +5,171 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minigame Pixelado - Isadora ❤️</title>
     <style>
-        /* ... estilos existentes ... */
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #111, #000000);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: white;
+            overflow: hidden;
+        }
         
-        /* NOVOS ESTILOS PARA TOUCH */
+        #game {
+            border: 3px solid #fff;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            box-shadow: 0 0 20px rgba(2, 2, 2, 0.133);
+        }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border: 1px solid #ffffff;
+            border-radius: 5px;
+        }
+        
+        .dialog {
+            position: fixed;
+            background: linear-gradient(145deg, #020202, #020202);
+            border: 2px solid #fff;
+            padding: 20px;
+            max-width: 320px;
+            min-height: 120px;
+            display: none;
+            font-size: 13px;
+            line-height: 1.4;
+            box-shadow: 0 0 30px rgba(243, 242, 242, 0.3);
+            z-index: 1000;
+        }
+        
+        .dialog.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        .dialog-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 0 5px #bc69ff;
+        }
+        
+        .dialog-text {
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            color: #ddd;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option {
+            background: linear-gradient(145deg, #444, #555);
+            border: 2px solid #666;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 8px;
+            user-select: none;
+        }
+        
+        .option:hover {
+            background: linear-gradient(145deg, #555, #666);
+            border-color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.2);
+        }
+        
+        .option.correct {
+            background: linear-gradient(145deg, #0f0, #2f2) !important;
+            border-color: #0f0 !important;
+            color: #000 !important;
+            animation: pulse 0.6s;
+            transform: scale(1.05);
+        }
+        
+        .option.wrong {
+            background: linear-gradient(145deg, #f00, #f44) !important;
+            border-color: #f00 !important;
+            color: #fff !important;
+            animation: shake 0.4s;
+        }
+        
+        .heart {
+            position: fixed;
+            font-size: 28px;
+            color: #ff69b4;
+            animation: heartFloat 1.2s ease-out forwards;
+            pointer-events: none;
+            z-index: 1001;
+            text-shadow: 0 0 10px #ff69b4;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+        
+        @keyframes heartFloat {
+            0% { transform: translateY(0) scale(0); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.3); opacity: 0; }
+        }
+
+        .victory {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(145deg, rgb(8, 8, 8), rgb(31, 2, 56));
+            border: 3px solid #fff;
+            padding: 30px;
+            text-align: center;
+            font-size: 18px;
+            display: none;
+            z-index: 2000;
+            border-radius: 15px;
+            animation: victoryPulse 2s infinite;
+        }
+
+        .victory.active {
+            display: block;
+        }
+
+        @keyframes victoryPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        /* CONTROLES TOUCH */
         #touch-controls {
-            display: none; /* Escondido por padrão, mostrado via JS em dispositivos touch */
+            display: none;
             position: fixed;
             bottom: 30px;
             left: 0;
@@ -19,7 +179,6 @@
             z-index: 500;
         }
         
-        /* Joystick Analógico */
         #joystick-zone {
             position: absolute;
             left: 30px;
@@ -36,7 +195,6 @@
             background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
-            box-sizing: border-box;
         }
         
         #joystick-stick {
@@ -52,7 +210,6 @@
             transition: transform 0.05s ease-out;
         }
         
-        /* Botão de Interação */
         #interact-btn {
             position: absolute;
             right: 30px;
@@ -71,7 +228,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: all 0.1s;
         }
         
         #interact-btn-bg::after {
@@ -85,15 +241,8 @@
         #interact-btn.active #interact-btn-bg {
             background: radial-gradient(circle, rgba(255,105,180,0.6) 0%, rgba(255,105,180,0.3) 100%);
             border-color: rgba(255,255,255,0.9);
-            transform: scale(0.95);
         }
         
-        #interact-btn.active #interact-btn-bg::after {
-            color: #fff;
-            text-shadow: 0 0 10px #ff69b4;
-        }
-        
-        /* Texto提示 */
         .touch-label {
             position: absolute;
             bottom: -15px;
@@ -104,34 +253,38 @@
             white-space: nowrap;
         }
         
-        /* Mostrar controles apenas em telas menores ou dispositivos touch */
         @media (max-width: 768px) {
             #touch-controls {
                 display: block;
             }
         }
         
-        /* Detecção de dispositivo touch */
         .touch-device #touch-controls {
             display: block;
-        }
-        
-        /* Overlay para prevenir scroll em mobile */
-        #touch-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 499;
-            display: none;
         }
     </style>
 </head>
 <body>
-    <!-- ... elementos existentes ... -->
+    <div id="ui">
+        WASD: Mover | E: Interagir<br>
+        <span id="progress">Pergunta 1/3</span>
+    </div>
     
-    <!-- NOVOS CONTROLES TOUCH -->
+    <canvas id="game" width="400" height="300"></canvas>
+    
+    <div id="dialog" class="dialog">
+        <div class="dialog-title">💕 Isadora 💕</div>
+        <div id="dialog-text" class="dialog-text"></div>
+        <div id="options" class="options"></div>
+    </div>
+
+    <div id="victory" class="victory">
+        <div style="font-size: 24px; margin-bottom: 15px;">UUUUUHUUUULLLLL</div>
+        <div style="font-size: 16px; color: #ffffff;">EU TE CONHEÇO BEM!</div>
+        <div style="margin-top: 20px; font-size: 14px;">EU TE AMO MINHA PRINCESA!!!</div>
+    </div>
+
+    <!-- CONTROLES TOUCH -->
     <div id="touch-controls">
         <div id="joystick-zone">
             <div id="joystick-base"></div>
@@ -144,36 +297,74 @@
             <span class="touch-label">AÇÃO</span>
         </div>
     </div>
-    
-    <!-- Overlay para prevenir scroll -->
-    <div id="touch-overlay"></div>
 
     <script>
-        // ... código existente ...
-        
-        // ========================================
-        // SISTEMA DE TOUCH CONTROLS (NOVO)
-        // ========================================
-        
-        // Detectar se é dispositivo touch
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const player = {
+            x: 50,
+            y: 50,
+            size: 10,
+            speed: 2.5
+        };
+
+        const isadora = {
+            x: 200,
+            y: 120,
+            size: 10,
+            nickname: 'Isadora',
+            color: '#ff69b4',
+            angry: false,
+            interactionRange: 25
+        };
+
+        const dialogs = [
+            {
+                question: "Qual minhas cores favoritas?",
+                options: ['preto e roxo', 'verde e amarelo', 'azul e laranja'],
+                correct: 0
+            },
+            {
+                question: "Qual minha flor favorita?",
+                options: ['margarida', 'rosa', 'Lírios'],
+                correct: 2
+            },
+            {
+                question: "Qual meu filme fav?",
+                options: ['Demon Slayer: Castelo Infinito', 'Interestelar', 'Será DG Circus'],
+                correct: 2
+            }
+        ];
+
+        let currentDialog = 0;
+        let showingDialog = false;
+        let gameWon = false;
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            if (e.key.toLowerCase() === 'e' && !showingDialog && !gameWon) {
+                checkInteraction();
+            }
+            
+            if (e.key.toLowerCase() === 'e' && gameWon) {
+                location.reload();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // TOUCH CONTROLS
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         
         if (isTouchDevice) {
             document.body.classList.add('touch-device');
-            document.getElementById('touch-overlay').style.display = 'block';
-            
-            // Prevenir scroll e zoom
-            document.addEventListener('touchmove', (e) => {
-                if (e.target.closest('#touch-controls')) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            document.addEventListener('gesturestart', (e) => e.preventDefault());
-            document.addEventListener('gesturechange', (e) => e.preventDefault());
         }
-        
-        // Variáveis do joystick
+
         const joystickZone = document.getElementById('joystick-zone');
         const joystickStick = document.getElementById('joystick-stick');
         const interactBtn = document.getElementById('interact-btn');
@@ -184,7 +375,6 @@
         let moveVector = { x: 0, y: 0 };
         const maxDistance = 35;
         
-        // Joystick - Touch Start
         joystickZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.changedTouches[0];
@@ -198,7 +388,6 @@
             };
         }, { passive: false });
         
-        // Joystick - Touch Move
         joystickZone.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (!joystickActive) return;
@@ -212,30 +401,23 @@
             }
             if (!touch) return;
             
-            // Calcular distância do centro
             let dx = touch.clientX - joystickCenter.x;
             let dy = touch.clientY - joystickCenter.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Limitar ao máximo
             if (distance > maxDistance) {
                 dx = (dx / distance) * maxDistance;
                 dy = (dy / distance) * maxDistance;
             }
             
-            // Mover o stick visual
             joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
-            
-            // Calcular vetor de movimento (-1 a 1)
             moveVector.x = dx / maxDistance;
             moveVector.y = dy / maxDistance;
             
         }, { passive: false });
         
-        // Joystick - Touch End
         joystickZone.addEventListener('touchend', (e) => {
             e.preventDefault();
-            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === joystickTouchId) {
                     joystickActive = false;
@@ -247,12 +429,10 @@
             }
         }, { passive: false });
         
-        // Botão de interação
         interactBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             interactBtn.classList.add('active');
             
-            // Executar interação
             if (!showingDialog && !gameWon) {
                 checkInteraction();
             } else if (gameWon) {
@@ -264,41 +444,57 @@
             e.preventDefault();
             interactBtn.classList.remove('active');
         }, { passive: false });
-        
-        // ========================================
-        // MODIFICAÇÃO DO LOOP DO JOGO
-        // ========================================
-        
+
+        function gameLoop() {
+            if (!gameWon) {
+                update();
+                render();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
         function update() {
-            // Movimento do teclado
             if (keys['w'] && player.y > 0) player.y -= player.speed;
             if (keys['s'] && player.y < canvas.height - player.size) player.y += player.speed;
             if (keys['a'] && player.x > 0) player.x -= player.speed;
             if (keys['d'] && player.x < canvas.width - player.size) player.x += player.speed;
             
-            // Movimento do joystick
             if (joystickActive && (moveVector.x !== 0 || moveVector.y !== 0)) {
                 const speed = player.speed;
                 
-                if (moveVector.y < -0.2 && player.y > 0) {
+                if (Math.abs(moveVector.y) > 0.2) {
                     player.y += moveVector.y * speed;
                 }
-                if (moveVector.y > 0.2 && player.y < canvas.height - player.size) {
-                    player.y += moveVector.y * speed;
-                }
-                if (moveVector.x < -0.2 && player.x > 0) {
+                if (Math.abs(moveVector.x) > 0.2) {
                     player.x += moveVector.x * speed;
                 }
-                if (moveVector.x > 0.2 && player.x < canvas.width - player.size) {
-                    player.x += moveVector.x * speed;
-                }
+                
+                player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+                player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
             }
         }
-        
-        // ... resto do código existente ...
-        
-        // Iniciar jogo
-        gameLoop();
-    </script>
-</body>
-</html>
+
+        function render() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#001122');
+            gradient.addColorStop(1, '#000011');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 12) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 12) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x+2, player.y+2, player
