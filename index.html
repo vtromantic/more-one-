@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minigame Pixelado - Isadora ❤️</title>
+    <style>
+        /* ... estilos existentes ... */
+        
+        /* NOVOS ESTILOS PARA TOUCH */
+        #touch-controls {
+            display: none; /* Escondido por padrão, mostrado via JS em dispositivos touch */
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            height: 150px;
+            pointer-events: none;
+            z-index: 500;
+        }
+        
+        /* Joystick Analógico */
+        #joystick-zone {
+            position: absolute;
+            left: 30px;
+            bottom: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+        
+        #joystick-base {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        
+        #joystick-stick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(200,200,200,0.6) 100%);
+            border: 2px solid rgba(255,255,255,0.9);
+            border-radius: 50%;
+            left: 35px;
+            top: 35px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.4);
+            transition: transform 0.05s ease-out;
+        }
+        
+        /* Botão de Interação */
+        #interact-btn {
+            position: absolute;
+            right: 30px;
+            bottom: 20px;
+            width: 80px;
+            height: 80px;
+            pointer-events: auto;
+        }
+        
+        #interact-btn-bg {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(255,105,180,0.3) 0%, rgba(255,105,180,0.1) 100%);
+            border: 3px solid rgba(255,105,180,0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.1s;
+        }
+        
+        #interact-btn-bg::after {
+            content: 'E';
+            font-size: 28px;
+            font-weight: bold;
+            color: rgba(255,255,255,0.7);
+            font-family: 'Courier New', monospace;
+        }
+        
+        #interact-btn.active #interact-btn-bg {
+            background: radial-gradient(circle, rgba(255,105,180,0.6) 0%, rgba(255,105,180,0.3) 100%);
+            border-color: rgba(255,255,255,0.9);
+            transform: scale(0.95);
+        }
+        
+        #interact-btn.active #interact-btn-bg::after {
+            color: #fff;
+            text-shadow: 0 0 10px #ff69b4;
+        }
+        
+        /* Texto提示 */
+        .touch-label {
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            white-space: nowrap;
+        }
+        
+        /* Mostrar controles apenas em telas menores ou dispositivos touch */
+        @media (max-width: 768px) {
+            #touch-controls {
+                display: block;
+            }
+        }
+        
+        /* Detecção de dispositivo touch */
+        .touch-device #touch-controls {
+            display: block;
+        }
+        
+        /* Overlay para prevenir scroll em mobile */
+        #touch-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 499;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- ... elementos existentes ... -->
+    
+    <!-- NOVOS CONTROLES TOUCH -->
+    <div id="touch-controls">
+        <div id="joystick-zone">
+            <div id="joystick-base"></div>
+            <div id="joystick-stick"></div>
+            <span class="touch-label">MOV</span>
+        </div>
+        
+        <div id="interact-btn">
+            <div id="interact-btn-bg"></div>
+            <span class="touch-label">AÇÃO</span>
+        </div>
+    </div>
+    
+    <!-- Overlay para prevenir scroll -->
+    <div id="touch-overlay"></div>
+
+    <script>
+        // ... código existente ...
+        
+        // ========================================
+        // SISTEMA DE TOUCH CONTROLS (NOVO)
+        // ========================================
+        
+        // Detectar se é dispositivo touch
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        
+        if (isTouchDevice) {
+            document.body.classList.add('touch-device');
+            document.getElementById('touch-overlay').style.display = 'block';
+            
+            // Prevenir scroll e zoom
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('#touch-controls')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            document.addEventListener('gesturestart', (e) => e.preventDefault());
+            document.addEventListener('gesturechange', (e) => e.preventDefault());
+        }
+        
+        // Variáveis do joystick
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickStick = document.getElementById('joystick-stick');
+        const interactBtn = document.getElementById('interact-btn');
+        
+        let joystickActive = false;
+        let joystickTouchId = null;
+        let joystickCenter = { x: 0, y: 0 };
+        let moveVector = { x: 0, y: 0 };
+        const maxDistance = 35;
+        
+        // Joystick - Touch Start
+        joystickZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            joystickActive = true;
+            
+            const rect = joystickZone.getBoundingClientRect();
+            joystickCenter = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }, { passive: false });
+        
+        // Joystick - Touch Move
+        joystickZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!joystickActive) return;
+            
+            let touch = null;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    touch = e.changedTouches[i];
+                    break;
+                }
+            }
+            if (!touch) return;
+            
+            // Calcular distância do centro
+            let dx = touch.clientX - joystickCenter.x;
+            let dy = touch.clientY - joystickCenter.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Limitar ao máximo
+            if (distance > maxDistance) {
+                dx = (dx / distance) * maxDistance;
+                dy = (dy / distance) * maxDistance;
+            }
+            
+            // Mover o stick visual
+            joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            // Calcular vetor de movimento (-1 a 1)
+            moveVector.x = dx / maxDistance;
+            moveVector.y = dy / maxDistance;
+            
+        }, { passive: false });
+        
+        // Joystick - Touch End
+        joystickZone.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    joystickActive = false;
+                    joystickTouchId = null;
+                    joystickStick.style.transform = 'translate(0, 0)';
+                    moveVector = { x: 0, y: 0 };
+                    break;
+                }
+            }
+        }, { passive: false });
+        
+        // Botão de interação
+        interactBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            interactBtn.classList.add('active');
+            
+            // Executar interação
+            if (!showingDialog && !gameWon) {
+                checkInteraction();
+            } else if (gameWon) {
+                location.reload();
+            }
+        }, { passive: false });
+        
+        interactBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            interactBtn.classList.remove('active');
+        }, { passive: false });
+        
+        // ========================================
+        // MODIFICAÇÃO DO LOOP DO JOGO
+        // ========================================
+        
+        function update() {
+            // Movimento do teclado
+            if (keys['w'] && player.y > 0) player.y -= player.speed;
+            if (keys['s'] && player.y < canvas.height - player.size) player.y += player.speed;
+            if (keys['a'] && player.x > 0) player.x -= player.speed;
+            if (keys['d'] && player.x < canvas.width - player.size) player.x += player.speed;
+            
+            // Movimento do joystick
+            if (joystickActive && (moveVector.x !== 0 || moveVector.y !== 0)) {
+                const speed = player.speed;
+                
+                if (moveVector.y < -0.2 && player.y > 0) {
+                    player.y += moveVector.y * speed;
+                }
+                if (moveVector.y > 0.2 && player.y < canvas.height - player.size) {
+                    player.y += moveVector.y * speed;
+                }
+                if (moveVector.x < -0.2 && player.x > 0) {
+                    player.x += moveVector.x * speed;
+                }
+                if (moveVector.x > 0.2 && player.x < canvas.width - player.size) {
+                    player.x += moveVector.x * speed;
+                }
+            }
+        }
+        
+        // ... resto do código existente ...
+        
+        // Iniciar jogo
+        gameLoop();
+    </script>
+</body>
+</html>
